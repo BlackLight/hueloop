@@ -1,0 +1,3 @@
+The only weak point in Philips Hue native apps is the lack of a mechanism for supporting color loops and color changes in general. You choose a color for your light bulb, and that's it.
+This tiny Python script should fill the gap.
+It supports two mode: loop (default) for color looping a certain light bulb or multiple bulbs through the whole hue/saturation color space, and random, for choosing the colors randomly at very short time intervals, creating a disco-like effect.

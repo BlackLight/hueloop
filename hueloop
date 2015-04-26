@@ -1,0 +1,110 @@
+#!/usr/bin/python2
+
+import sys, re
+from time import sleep
+from random import random
+from getopt import getopt
+from phue import Bridge
+
+config = {}
+
+class Hue():
+    def __init__(self, bridge, lightbulb=None):
+        self.bridgeAddress = bridge
+
+        if lightbulb:
+            m = re.split('\s*,\s*', lightbulb)
+            self.lightbulbs = m if m else [lightbulb]
+
+    def connect(self):
+        self.bridge = Bridge(self.bridgeAddress)
+        self.bridge.connect()
+        self.bridge.get_api()
+
+        if not hasattr(self, 'lightbulbs'):
+            self.lightbulbs = []
+            for light in self.bridge.lights:
+                self.lightbulbs.append(light.name)
+
+    def do(self):
+        maxBri = 255
+        maxSat = 500
+        maxHue = 65536
+
+        direction = {}
+        for light in self.lightbulbs:
+            direction[light] = {}
+            direction[light]['hue'] = 1
+            direction[light]['sat'] = 1
+
+        while True:
+            if config['mode'] == 'random':
+                on  = True if int(random()*100)%2 == 0 else False
+                bri = int(random()*maxBri)
+                sat = int(random()*maxSat)
+                hue = int(random()*maxHue)
+
+                # self.bridge.set_light(self.lightbulbs, 'on',  on)
+                self.bridge.set_light(self.lightbulbs, 'bri', bri)
+                self.bridge.set_light(self.lightbulbs, 'sat', sat)
+                self.bridge.set_light(self.lightbulbs, 'hue', hue)
+            elif config['mode'] == 'loop':
+                for light in self.lightbulbs:
+                    on  = self.bridge.get_light(light, 'on')
+                    bri = self.bridge.get_light(light, 'bri')
+                    sat = self.bridge.get_light(light, 'sat') + direction[light]['sat']
+                    hue = self.bridge.get_light(light, 'hue') + direction[light]['hue'] * 100
+
+                    if hue >= maxHue:
+                        hue = maxHue
+                        direction[light]['hue'] = -1
+                    elif hue <= 0:
+                        hue = 0
+                        direction[light]['hue'] = 1
+
+                    if sat >= maxSat:
+                        sat = maxSat
+                        direction[light]['sat'] = -1
+                    elif sat <= 0:
+                        sat = 0
+                        direction[light]['sat'] = 1
+
+                    self.bridge.set_light(self.lightbulbs, 'hue', hue)
+                    self.bridge.set_light(self.lightbulbs, 'sat', sat)
+
+            sleep(0.001)
+
+def showHelp():
+    print "Usage: %s <-b|--bridge> bridge [-l|--lightbulb lighbulb] [-m|--mode <mode>] <--on|--off>\n" \
+        "  -b|--bridge\tIP address or hostname of the Philips Hue bridge\n" \
+        "  -l|--lightbulb\tLightbulbs to toggle, name or index, or comma separated list (default: all)\n" \
+        "  -m|--mode\tLights mode (loop or random) (default: loop)\n" \
+        % (sys.argv[0])
+
+def initConfig():
+    optlist, args = getopt(sys.argv[1:], 'b:l:m:', ['bridge=', 'lightbulb=', 'mode='])
+    config['mode'] = 'loop'
+
+    for opt in optlist:
+        if opt[0] == '-b' or opt[0] == '--bridge':
+            config['bridge'] = opt[1]
+        elif opt[0] == '-l' or opt[0] == '--lightbulb':
+            config['lightbulb'] = opt[1]
+        elif opt[0] == '-m' or opt[0] == '--mode':
+            config['mode'] = opt[1]
+
+    if 'bridge' not in config:
+        showHelp()
+        sys.exit(1)
+
+def main():
+    initConfig()
+
+    print "Initializing Philips Hue connection"
+    config['hue'] = Hue(bridge=config['bridge'], lightbulb = (config['lightbulb'] if 'lightbulb' in config else None))
+    config['hue'].connect()
+    config['hue'].do()
+
+if __name__ == "__main__":
+    main()
+
