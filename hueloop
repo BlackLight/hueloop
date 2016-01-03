@@ -52,8 +52,9 @@ class Hue():
                 for light in self.lightbulbs:
                     on  = self.bridge.get_light(light, 'on')
                     bri = self.bridge.get_light(light, 'bri')
-                    sat = self.bridge.get_light(light, 'sat') + direction[light]['sat']
-                    hue = self.bridge.get_light(light, 'hue') + direction[light]['hue'] * 100
+                    sat = self.bridge.get_light(light, 'sat') + direction[light]['sat'] * 4
+                    hue = self.bridge.get_light(light, 'hue') + direction[light]['hue'] * 16600
+                    # hue = self.bridge.get_light(light, 'hue') + direction[light]['hue'] * 600
 
                     if hue >= maxHue:
                         hue = maxHue
